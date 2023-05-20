@@ -29,12 +29,20 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    client.connect();
+    await client.connect();
 
     const carsCollection = client.db("toy-cars").collection("cars");
 
     app.get("/cars", async (req, res) => {
       const result = await carsCollection.find().toArray();
+      res.send(result);
+    });
+
+    app.get("/category/:category", async (req, res) => {
+      const category = req.params.category;
+      const result = await carsCollection
+        .find({ subcategory: category })
+        .toArray();
       res.send(result);
     });
 
