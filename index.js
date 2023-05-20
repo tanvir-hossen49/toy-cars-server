@@ -32,6 +32,9 @@ async function run() {
     await client.connect();
 
     const carsCollection = client.db("toy-cars").collection("cars");
+    const customerReviewCollection = client
+      .db("toy-cars")
+      .collection("customer-review");
 
     app.get("/cars", async (req, res) => {
       const result = await carsCollection.find().toArray();
@@ -43,6 +46,11 @@ async function run() {
       const result = await carsCollection
         .find({ subcategory: category })
         .toArray();
+      res.send(result);
+    });
+
+    app.get("/customer-review", async (req, res) => {
+      const result = await customerReviewCollection.find().toArray();
       res.send(result);
     });
 
