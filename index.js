@@ -31,7 +31,7 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     client.connect();
 
-    const carsCollection = client.db("toy-cars").collection("cars");
+    const toysCollection = client.db("toy-cars").collection("cars");
 
     const customerReviewCollection = client
       .db("toy-cars")
@@ -39,25 +39,35 @@ async function run() {
 
     app.get("/all-toys", async (req, res) => {
       const limit = 20;
-      const result = await carsCollection.find().limit(limit).toArray();
+      const result = await toysCollection.find().limit(limit).toArray();
       res.send(result);
     });
 
     app.get("/category/:category", async (req, res) => {
       const category = req.params.category;
-      const result = await carsCollection
-        .find({ subcategory: category })
+      console.log(category);
+      const result = await toysCollection
+        .find({ subCategory: category })
         .toArray();
+      console.log(result);
       res.send(result);
     });
 
     app.get("/toy/:id", async (req, res) => {
+      console.log("hi");
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
-      const result = await carsCollection.findOne(query);
+      const result = await toysCollection.findOne(query);
       res.send(result);
     });
 
+    app.post("/toy", async (req, res) => {
+      const toy = req.body;
+      const result = await toysCollection.insertOne(toy);
+      res.send(result);
+    });
+
+    //customer collection
     app.get("/customer-review", async (req, res) => {
       const result = await customerReviewCollection.find().toArray();
       res.send(result);
