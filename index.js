@@ -70,6 +70,13 @@ async function run() {
       res.send(result);
     });
 
+    app.delete("/my-toys/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await toysCollection.deleteOne(query);
+      res.send(result);
+    });
+
     app.post("/toy", async (req, res) => {
       const toy = req.body;
       const result = await toysCollection.insertOne(toy);
