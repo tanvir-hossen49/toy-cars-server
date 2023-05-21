@@ -1,6 +1,6 @@
 const express = require("express");
 const cors = require("cors");
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
 
 const app = express();
@@ -29,15 +29,17 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    client.connect();
 
     const carsCollection = client.db("toy-cars").collection("cars");
+
     const customerReviewCollection = client
       .db("toy-cars")
       .collection("customer-review");
 
-    app.get("/cars", async (req, res) => {
-      const result = await carsCollection.find().toArray();
+    app.get("/all-toys", async (req, res) => {
+      const limit = 20;
+      const result = await carsCollection.find().limit(limit).toArray();
       res.send(result);
     });
 
@@ -46,6 +48,13 @@ async function run() {
       const result = await carsCollection
         .find({ subcategory: category })
         .toArray();
+      res.send(result);
+    });
+
+    app.get("/toy/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await carsCollection.findOne(query);
       res.send(result);
     });
 
