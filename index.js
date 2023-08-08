@@ -11,7 +11,7 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-app.get("/", (req, res) => {
+app.get("/", (_req, res) => {
   res.send("doctor is running");
 });
 
@@ -37,86 +37,226 @@ async function run() {
       .db("toy-cars")
       .collection("customer-review");
 
-    app.get("/all-toys", async (req, res) => {
-      const limit = 20;
-      const result = await toysCollection.find().limit(limit).toArray();
-      res.send(result);
+    app.get("/all-toys", async (_req, res) => {
+      try {
+        const limit = 20;
+        const toys = await toysCollection.find().limit(limit).toArray();
+
+        if (toys.length > 0) {
+          res.json(toys);
+        } else {
+          res.status(404).json({ error: "No toys found" });
+        }
+      } catch (error) {
+        console.error("Error fetching all toys:", error);
+        res
+          .status(500)
+          .json({ error: "An error occurred while fetching toys" });
+      }
     });
 
     app.get("/category/:category", async (req, res) => {
-      const category = req.params.category;
-      console.log(category);
-      const result = await toysCollection
-        .find({ subCategory: category })
-        .toArray();
-      console.log(result);
-      res.send(result);
+      try {
+        const category = req.params.category;
+
+        const toysInCategory = await toysCollection
+          .find({ subCategory: category })
+          .toArray();
+
+        if (toysInCategory.length > 0) {
+          res.json(toysInCategory);
+        } else {
+          res.status(404).json({ error: "No toys found in this category" });
+        }
+      } catch (error) {
+        console.error("Error fetching toys in category:", error);
+        res
+          .status(500)
+          .json({ error: "An error occurred while fetching toys" });
+      }
     });
 
     app.get("/toy/:id", async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: new ObjectId(id) };
-      const result = await toysCollection.findOne(query);
-      res.send(result);
+      try {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+
+        const result = await toysCollection.findOne(query);
+
+        if (result) {
+          res.json(result); // Sending JSON response
+        } else {
+          res.status(404).json({ error: "Toy not found" });
+        }
+      } catch (error) {
+        console.error("Error fetching toy:", error);
+        res
+          .status(500)
+          .json({ error: "An error occurred while fetching the toy" });
+      }
     });
 
     app.get("/my-toys", async (req, res) => {
-      const { sortType } = req.query;
-      const sortDirection = sortType === "ascending" ? 1 : -1;
-      let query = {};
-      if (req.query?.email) {
-        query.sellerEmail = req.query.email;
+      try {
+        const { sortType, email } = req.query;
+        const sortDirection = sortType === "ascending" ? 1 : -1;
+
+        const query = email ? { sellerEmail: email } : {};
+
+        const toys = await toysCollection
+          .find(query)
+          .sort({ price: sortDirection })
+          .toArray();
+
+        if (toys.length > 0) {
+          res.json(toys);
+        } else {
+          res.status(404).json({ error: "No toys found" });
+        }
+      } catch (error) {
+        console.error("Error fetching my toys:", error);
+        res
+          .status(500)
+          .json({ error: "An error occurred while fetching toys" });
       }
-      const result = await toysCollection
-        .find(query)
-        .sort({ price: sortDirection })
-        .toArray();
-      res.send(result);
     });
 
     app.delete("/my-toys/:id", async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: new ObjectId(id) };
-      const result = await toysCollection.deleteOne(query);
-      res.send(result);
+      try {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+
+        const deletionResult = await toysCollection.deleteOne(query);
+
+        if (deletionResult.deletedCount === 1) {
+          res.json({ message: "Toy deleted successfully" });
+        } else {
+          res.status(404).json({ error: "Toy not found" });
+        }
+      } catch (error) {
+        console.error("Error deleting toy:", error);
+        res
+          .status(500)
+          .json({ error: "An error occurred while deleting the toy" });
+      }
     });
 
     app.put("/my-toy/:id", async (req, res) => {
-      const id = req.params.id;
-      console.log(id);
-      const filter = { _id: new ObjectId(id) };
-      const options = { upsert: true };
-      const updatedToy = req.body;
-      const Toy = {
-        $set: {
-          toyName: updatedToy.toyName,
-          price: updatedToy.price,
-          category: updatedToy.category,
-          quantity: updatedToy.quantity,
-          descriptions: updatedToy.descriptions,
-        },
-      };
-      const result = await toysCollection.updateOne(filter, Toy, options);
-      res.send(result);
+      try {
+        const id = req.params.id;
+        const filter = { _id: new ObjectId(id) };
+
+        const updatedToy = req.body;
+        const updateFields = {
+          $set: {
+            toyName: updatedToy.toyName,
+            price: updatedToy.price,
+            category: updatedToy.category,
+            quantity: updatedToy.quantity,
+            descriptions: updatedToy.descriptions,
+          },
+        };
+
+        const options = { upsert: true };
+
+        const updateResult = await toysCollection.updateOne(
+          filter,
+          updateFields,
+          options
+        );
+
+        if (updateResult.matchedCount === 1) {
+          res.json({ message: "Toy updated successfully" });
+        } else {
+          res.status(404).json({ error: "Toy not found" });
+        }
+      } catch (error) {
+        console.error("Error updating toy:", error);
+        res
+          .status(500)
+          .json({ error: "An error occurred while updating the toy" });
+      }
     });
 
     app.post("/toy", async (req, res) => {
-      const toy = req.body;
-      const result = await toysCollection.insertOne(toy);
-      res.send(result);
+      try {
+        const toy = req.body;
+
+        const insertionResult = await toysCollection.insertOne(toy);
+
+        if (insertionResult.insertedCount === 1) {
+          res.json({
+            message: "Toy created successfully",
+            insertedId: insertionResult.insertedId,
+          });
+        } else {
+          res.status(500).json({ error: "Failed to create toy" });
+        }
+      } catch (error) {
+        console.error("Error creating toy:", error);
+        res
+          .status(500)
+          .json({ error: "An error occurred while creating the toy" });
+      }
     });
 
     app.get("/my-toy/:id", async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: new ObjectId(id) };
-      const result = await toysCollection.findOne(query);
-      res.send(result);
+      try {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+
+        const toy = await toysCollection.findOne(query);
+
+        if (toy) {
+          res.json(toy);
+        } else {
+          res.status(404).json({ error: "Toy not found" });
+        }
+      } catch (error) {
+        console.error("Error fetching toy:", error);
+        res
+          .status(500)
+          .json({ error: "An error occurred while fetching the toy" });
+      }
+    });
+
+    app.get("/top-rated-product", async (_req, res) => {
+      try {
+        const toys = await toysCollection
+          .find()
+          .sort({ ratings: -1 })
+          .limit(6)
+          .toArray();
+
+        if (toys.length > 0) {
+          res.json(toys);
+        } else {
+          res.status(404).json({ error: "No toys found" });
+        }
+      } catch (error) {
+        console.error("Error fetching my toys:", error);
+        res
+          .status(500)
+          .json({ error: "An error occurred while fetching toys" });
+      }
     });
 
     //customer collection
-    app.get("/customer-review", async (req, res) => {
-      const result = await customerReviewCollection.find().toArray();
-      res.send(result);
+    app.get("/customer-review", async (_req, res) => {
+      try {
+        const reviews = await customerReviewCollection.find().toArray();
+
+        if (reviews.length > 0) {
+          res.json(reviews);
+        } else {
+          res.status(404).json({ error: "No customer reviews found" });
+        }
+      } catch (error) {
+        console.error("Error fetching customer reviews:", error);
+        res
+          .status(500)
+          .json({ error: "An error occurred while fetching customer reviews" });
+      }
     });
 
     // Send a ping to confirm a successful connection
